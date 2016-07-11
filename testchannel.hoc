@@ -1,0 +1,41 @@
+//load_file("nrngui.hoc")
+
+create soma
+access soma
+
+rel = 0.5
+dt = 0.1
+
+celsius = 35.0
+
+
+forsec "soma"{
+	//insert iAHP
+}
+
+
+objref spkt, netcon, nil, savdata, isivec
+spkt = new Vector()
+savdata = new File()
+savdata.wopen("firingdata.dat")
+
+objectvar stim
+stim = new IClamp(0.5)
+stim.dur = 500
+stim.amp = (0.5*.3)*i
+stim.del = 250
+
+netcon = new NetCon(&v(0.5), nil)
+	netcon.threshold = 0
+	netcon.record(spkt)
+objref netcon
+
+run()
+
+isivec = spkt.c
+isivec.deriv  //calculation of interspike interval
+isivec.printf("%g\n")
+printf("%g\n", 0.15*i)  //print stimulus values
+
+
+

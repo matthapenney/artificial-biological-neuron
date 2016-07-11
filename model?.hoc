@@ -1,0 +1,123 @@
+load_file("nrngui.hoc") 	
+
+
+//public variables
+public soma, dend, axon		// soma (1), dend(106), axon(17)
+public  gid, randi, Vrest
+
+
+//objects
+objref g, b,c, stim, distrx, distry, cdistry, p,k,o
+
+
+
+// set the initialization code, which is run whenever a new object
+// of this class is instantiated
+proc init() {
+	gid = $1
+	randi = $2
+	Vrest = -66 // -65 // $3 resting membrane potential in mV
+
+
+
+// subcellular mechanisms: channels, pumps, transporters
+	mechinit()			// local fcn: set values for max conductances and reversal potentials of ion channels and other ephys parameters that are subject to fitting
+	insert_mechs()		// local fcn: insert ion channels and actually set values determined in the mechinit fcn
+	
+xopen("4NPY.hoc")             // geometry file - load in neuron morphology (4-NPY)
+xopen("fixnseg.hoc") 
+
+proc mechinit() {
+	NumSoma=13
+	NumApical=127
+	NumBasal=60
+	NumAxon=2
+
+	Rm = 28000 // 5555 // 
+	RmDend = Rm/2
+	RmSoma = Rm
+	RmAx = Rm
+
+	Cm    = 1
+	CmSoma= Cm
+	CmAx  = Cm
+	CmDend = Cm*2
+
+	celsius = 34.0  
+
+	RaAll= 150 
+	RaSoma=150 
+	RaAx = 50
+
+
+	ekval = -90
+	enaval = 55
+	eHCNval = -30
+	eleakval = 	Vrest // not lower than ekval
+
+// conductances
+	gNav     = 0.032 // Nav conductance in mho/cm2
+	gNavaxon = 0.064 // axon multiplier for Nav conductance
+	gKdr     = 0.003 // Kdr conductance in mho/cm2
+	gKvAdist = 0.008 // distal KvA conductance in mho/cm2
+	gKvAprox = 0.008 // proximal KvA conductance in mho/cm2
+	gHCN     = 0.0006 // hcurrent conductance in mho/cm2 --> 6 pS/um2
+}
+
+
+
+
+
+
+
+
+
+objref spkt, netcon, nil, savdata, isivec
+spkt = new Vector()
+savdata = new File()
+savdata.wopen("basicinfo.dat")
+
+objectvar stim
+stim = new IClamp(0.5)
+stim.dur = 500
+stim.amp = (.05*3)//*i	//i refers to loop in "figure4cloop"
+stim.del = 250
+
+
+//savdata.printf("%g\n", spkt.size())
+	netcon = new NetCon(&v(0.5), nil)
+	netcon.threshold = -20
+	netcon.record(spkt)
+//tvec = netcon.get_recordvec()	
+objref netcon
+
+
+
+/*
+proc runm() {
+runp(1)
+}
+*/ 
+run()
+
+
+isivec = spkt.c
+isivec.deriv  //calculation of interspike interval
+isivec.printf("%g\n")
+
+//savdata.printf("%g\n",tvec)
+savdata.close
+/*
+µstrdef cmd
+sprint(cmd,"./results/%s/lfptrace_%g.dat", "MyName", 5)	// Make a separate file
+objref f
+f = new File(cmd)											//  for each recorded cell
+f.wopen()
+                
+                for k = 0, lfptrace.count()-1 {
+                    lfpvec = lfptrace.o(k)
+					f.printf("%g\t%g\n", lfpvec.x[0], lfpvec.x[1])	// Prints time and LFP value
+                }
+                
+f.close()
+*/

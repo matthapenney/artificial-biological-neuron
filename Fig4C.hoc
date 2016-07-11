@@ -1,0 +1,312 @@
+//load_file("nrngui.hoc")
+//cvode_active(1)
+
+xopen("4NPY.hoc")             // geometry file
+xopen("fixnseg.hoc")       
+
+Rm = 28000
+RmDend = Rm
+RmSoma = Rm
+RmAx = Rm
+
+Cm    = 1
+CmSoma= Cm
+CmAx  = Cm
+CmDend = Cm
+
+RaAll= 150
+RaSoma=150  
+RaAx = 50
+
+Vrest = -65
+dt = 0.1
+
+celsius = 35.0 
+
+gna =.07
+gkdr = 0.005*3
+ghd=2*0.00005
+gHCN = .0006
+
+ 
+KMULT =  0.03*.01
+KMULTP = 0.03 
+AXONM = 5
+
+ekval = -90
+enaval = 55
+eHCNval = -30
+eleakval = 	Vrest 
+
+
+objref g, b,c, stim, distrx, distry, cdistry, p,k,o
+
+forsec "soma" {insert pas e_pas=Vrest g_pas = 1/RmSoma Ra=RaSoma cm=CmSoma}
+forsec "dend"{insert pas e_pas=Vrest g_pas = 1/RmDend Ra=RaAll cm=CmDend}
+
+access soma
+
+freq=50
+geom_nseg()
+tot=0
+forall {tot=tot+nseg}
+distance()
+
+tstop=1000
+
+/*
+b = new VBox()
+b.intercept(1)
+g = new Graph()
+g.size(0,tstop,-70,35)
+g.addvar("soma.v(0.5)",3,1,2*tstop,0,2)
+g.addvar("dend[95].v(0.5)",6,1,2*tstop,0,2)
+g.addvar("dend[84].v(.75)",4,1,2*tstop,0,2)
+
+g.label(0.75,0.55," time (ms)",2,1,0,1,1)
+g.label(0.01,0.99," voltage (mV)",2,1,0,1,1)
+g.xaxis(1)
+
+k = new Graph()
+k.size(0,tstop,-0.012,0.028)
+k.label(0.75,0.265," time (ms)",2,1,0,1,1)
+k.label(0.01,0.99," current (nA)",2,1,0,1,1)
+k.xaxis(1)
+
+b.intercept(0)
+b.map()
+
+o = new VBox()
+o.intercept(1)
+
+p = new PlotShape()
+p.exec_menu("Shape Plot")
+p.size(-50,100,-500,400)
+p.variable("v")
+p.show(0)
+//p.label(0.01,0.01," 85-LM-HiDe - SLM CA3 Interneuron - Barrionuevo's lab")
+
+/*
+c = new Graph()
+c.size(0,740,0,100)
+c.xaxis(1)
+c.exec_menu("10% Zoom out")
+c.color(1)
+c.label(0.01,0.9," bAP peak (mV)")
+c.label(0.6,0.1," distance from soma (microns)",2,1,0,1,1)
+*/
+
+//xpanel("")
+//xbutton("runm ", "runm()")
+//xpanel()
+
+
+//o.intercept(0)
+//o.map()
+
+rel=0.5
+
+
+
+forsec "soma" {   
+		insert hd ghdbar_hd=ghd	vhalfl_hd=-73
+                insert na3 gbar_na3=gna
+                insert kdr gkdrbar_kdr=gkdr
+                insert kap gkabar_kap = KMULTP
+        insert iAHP gkbar_iAHP = 0.000207 ek = ekval
+		insert ds
+}
+
+
+forsec "dend" {
+	insert ds
+		insert hd ghdbar_hd=ghd vhalfl_hd=-73
+                insert na3 gbar_na3=gna
+                insert kdr gkdrbar_kdr=gkdr
+		insert kap gkabar_kap=0
+		insert kad gkabar_kad=0
+
+		for (x) if (x>0 && x<1) { xdist = distance(x)
+                	ghdbar_hd(x) = ghd*(1+3*xdist/100)
+                		if (xdist > 100){
+					vhalfl_hd=-81
+                        		gkabar_kad(x) = KMULT*(1+xdist/100)
+                			} else {
+					vhalfl_hd=-73
+                        		gkabar_kap(x) = KMULTP*(1+xdist/100)
+               				}
+		}
+}
+
+proc init() {
+	t=0
+        forall {
+        v=Vrest
+        if (ismembrane("nax") || ismembrane("na3")) {ena=55}
+        if (ismembrane("kdr") || ismembrane("kap") || ismembrane("kad")) {ek=-90}
+        if (ismembrane("hd") ) {ehd_hd=-30}
+	}
+	finitialize(Vrest)
+        fcurrent()
+
+        forall {
+	for (x) {
+	if (ismembrane("na3")||ismembrane("nax")){e_pas(x)=v(x)+(ina(x)+ik(x))/g_pas(x)}
+	if (ismembrane("hd")) {e_pas(x)=e_pas(x)+i_hd(x)/g_pas(x)}
+		}
+	}
+	
+	/*
+	dend[95]{
+	k.addvar("ina(1)",1,1,2*tstop,0,2)
+	k.addvar("ik(1)",5,1,2*tstop,0,2)
+	k.addvar("i_hd(1)",7,1,2*tstop,0,2)
+	}
+	*/
+	
+	
+	cvode.re_init()
+	cvode.event(tstop)
+	access soma
+	//g.begin()
+	//k.begin()
+}
+
+/*
+proc advance() {
+	fadvance()
+	g.plot(t)
+	g.flush()
+	//k.plot(t)
+	//k.flush()
+	p.flush()
+	doNotify()
+}
+*/
+//proc runp() {
+//g.label(0.2,0.8," Soma",2,1,0,1,3)
+
+/*g.label(0.22,0.6," Proximal dendrite",2,1,0,4,4)
+g.label(0.30,0.4," Distal dendrite",2,1,0,4,6)
+k.label(0.28,0.8," IK",2,1,0,1,5)
+k.label(0.25,0.3," INA",2,1,0,4,1)
+k.label(0.4,0.32," Ih",2,1,0,4,7)
+*/
+
+//stdinit()
+//continuerun(tstop)
+
+/*
+distrx=new Vector()
+	distry=new Vector()
+	forall {
+		for (x) if (x>0 && x<1) {
+			if (diam>=0) {
+			distrx.append(distance(x)) 
+			distry.append(vmax_ds(x)-Vrest)
+			}
+		}
+	}
+	distry.mark(c,distrx,"O",3,$1,2)
+	c.flush()
+	doNotify()
+*/
+
+	distrx=new Vector()
+	distry=new Vector()
+	dend[95] {
+		for (x) if (x>0 && x<1) {
+			if (diam>=0) {
+			distrx.append(distance(x)) 
+			distry.append(vmax_ds(x)-Vrest)
+			}
+		}
+	}
+	dend[84] {
+		for (x) if (x>0 && x<1) {
+			if (diam>=0) {
+			distrx.append(distance(x)) 
+			distry.append(vmax_ds(x)-Vrest)
+			}
+		}
+	}
+	
+	dend[85] {
+		for (x) if (x>0 && x<1) {
+			if (diam>=0) {
+			distrx.append(distance(x)) 
+			distry.append(vmax_ds(x)-Vrest)
+			}
+		}
+	}
+	dend[93] {
+		for (x) if (x>0 && x<1) {
+			if (diam>=0) {
+			distrx.append(distance(x)) 
+			distry.append(vmax_ds(x)-Vrest)
+			}
+		}
+	}
+	//c.label(0.55,0.55," All compartments",2,1,0,1,1)
+	//c.label(0.2,0.4," Branch #6",2,1,0,1,2)
+	//distry.mark(c,distrx,"O",5,2,2)
+	//c.flush()
+	//doNotify()
+//}
+
+
+
+objref spkt, netcon, nil, savdata, isivec
+spkt = new Vector()
+savdata = new File()
+savdata.wopen("firingdata.dat")
+
+
+  
+   
+objectvar stim
+stim = new IClamp(0.5)
+stim.dur = 500
+stim.amp = (0.5*.3)*i	//i refers to loop in "figure4cloop"
+stim.del = 250
+
+
+//savdata.printf("%g\n", spkt.size())
+	netcon = new NetCon(&v(0.5), nil)
+	netcon.threshold = 0
+	netcon.record(spkt)
+objref netcon
+
+
+
+/*
+proc runm() {
+runp(1)
+}
+*/ 
+run()
+
+
+
+isivec = spkt.c
+isivec.deriv  //calculation of interspike interval
+isivec.printf("%g\n")
+printf("%g\n", 0.15*i)  //print stimulus values
+
+
+//savdata.printf("%g\n",tvec)
+ //savdata.close
+/*
+µstrdef cmd
+sprint(cmd,"./results/%s/lfptrace_%g.dat", "MyName", 5)	// Make a separate file
+objref f
+f = new File(cmd)											//  for each recorded cell
+f.wopen()
+                
+                for k = 0, lfptrace.count()-1 {
+                    lfpvec = lfptrace.o(k)
+					f.printf("%g\t%g\n", lfpvec.x[0], lfpvec.x[1])	// Prints time and LFP value
+                }
+                
+f.close()
+*/

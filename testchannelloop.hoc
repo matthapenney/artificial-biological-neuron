@@ -1,0 +1,5 @@
+load_file("nrngui.hoc")
+
+for i = 2,5 {
+	xopen("testchannel.hoc")
+}

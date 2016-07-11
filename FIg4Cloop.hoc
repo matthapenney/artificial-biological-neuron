@@ -1,0 +1,13 @@
+//Outer simulation for loop
+load_file("nrngui.hoc")
+
+
+for i = 1, 5 {
+	xopen("Fig4C.hoc")		//open main code
+	
+	//run("Fig4C.hoc")
+	
+	
+	}
+	
+
